@@ -1,0 +1,23 @@
+# Кастомные настройки и секреты
+local.properties
+.gradle
+.externalNativeBuild
+.cxx
+*.iml
+
+# Папки сборки
+build/
+/*/build/
+
+# IDE (Android Studio / IntelliJ)
+.idea/
+# Если работаешь в команде, иногда оставляют .idea/codeStyles или .idea/vcs.xml,
+# но для личного проекта проще игнорировать всю папку.
+
+# Логи и кэш
+captures/
+.DS_Store
+
+# Room / Kotlin
+# Если используешь kapt, иногда генерируются файлы здесь:
+/build
