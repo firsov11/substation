@@ -1,26 +1,57 @@
 package com.firsov.substation.ui.editor
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.firsov.substation.data.model.*
+import com.firsov.substation.data.model.Breaker
+import com.firsov.substation.data.model.Cell
+import com.firsov.substation.data.model.Disconnector
+import com.firsov.substation.data.model.Equipment
+import com.firsov.substation.data.model.Transformer
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorCellScreen(
     cell: Cell,
+    index: Int,
     onSave: (Cell) -> Unit,
     onDelete: (Cell) -> Unit,
     onBack: () -> Unit
 ) {
-
     val scrollState = rememberScrollState()
-
     var selectedEquipment by remember { mutableStateOf(cell.equipment) }
     var dispatcherName by remember { mutableStateOf(cell.equipment?.dispatcherName ?: "") }
 
@@ -32,116 +63,159 @@ fun EditorCellScreen(
         listOf(10f, 0.4f)
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-
-        Text(
-            "Редактор ячейки: ${cell.id}",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Text("Выключатели")
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            breakerVoltages.forEach { voltage ->
-                Button(
-                    onClick = { selectedEquipment = Breaker(voltage = voltage) }
-                ) {
-                    Text("${voltage.toInt()} кВ")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Ячейка № ${index + 1}") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        // Используем обычный ArrowBack без AutoMirrored для надежности
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Назад"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        onDelete(cell)
+                        onBack()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Удалить",
+                            tint = Color.Red
+                        )
+                    }
                 }
-            }
-        }
-
-        Text("Разъединители")
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            disconnectorVoltages.forEach { voltage ->
-                Button(
-                    onClick = { selectedEquipment = Disconnector(voltage = voltage) }
-                ) {
-                    Text("${voltage.toInt()} кВ")
-                }
-            }
-        }
-
-        Text("Трансформаторы")
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            transformerOptions.forEach { windings ->
-                Button(
-                    onClick = { selectedEquipment = Transformer(windings = windings) }
-                ) {
-                    Text(windings.joinToString(" / "))
-                }
-            }
-        }
-
-        if (selectedEquipment != null) {
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            TextField(
-                value = dispatcherName,
-                onValueChange = { dispatcherName = it },
-                label = { Text("Диспетчерское имя") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
             )
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
-            Button(onClick = {
-                // Создаем НОВЫЙ объект оборудования с обновленным именем
-                val finalEquipment = when (val eq = selectedEquipment) {
-                    is Breaker -> eq.copy(dispatcherName = dispatcherName)
-                    is Disconnector -> eq.copy(dispatcherName = dispatcherName)
-                    is Transformer -> eq.copy(dispatcherName = dispatcherName)
-                    else -> null
+        ,
+        bottomBar = {
+            // Кнопка сохранить всегда внизу
+            Surface(tonalElevation = 3.dp) {
+                Button(
+                    onClick = {
+                        val finalEquipment = when (val eq = selectedEquipment) {
+                            is Breaker -> eq.copy(dispatcherName = dispatcherName)
+                            is Disconnector -> eq.copy(dispatcherName = dispatcherName)
+                            is Transformer -> eq.copy(dispatcherName = dispatcherName)
+                            else -> null
+                        }
+                        if (finalEquipment != null) {
+                            onSave(cell.copy(equipment = finalEquipment))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text("Сохранить")
                 }
-
-                if (finalEquipment != null) {
-                    // Передаем в onSave ячейку с НОВЫМ объектом оборудования
-                    onSave(cell.copy(equipment = finalEquipment))
-                    onBack()
-                }
-            })
-            {
-                Text("Сохранить")
-            }
-
-
-            Button(
-                onClick = {
-                    onDelete(cell)
-                    onBack()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-            ) {
-                Text("Удалить")
             }
         }
+    ) { padding ->
+        // Светлый непрозрачный фон для всего контента
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SectionTitle("Выключатели")
+                EquipmentChips(
+                    voltages = breakerVoltages,
+                    selectedVoltage = (selectedEquipment as? Breaker)?.voltage, // Теперь это второй аргумент
+                    creator = { voltage -> Breaker(voltage = voltage) },       // Явно указываем имя параметра
+                    onSelect = { equipment -> selectedEquipment = equipment }
+                )
 
-        Spacer(modifier = Modifier.height(10.dp))
+                SectionTitle("Разъединители")
+                EquipmentChips(
+                    voltages = disconnectorVoltages,
+                    selectedVoltage = (selectedEquipment as? Disconnector)?.voltage,
+                    creator = { voltage -> Disconnector(voltage = voltage) },
+                    onSelect = { equipment -> selectedEquipment = equipment }
+                )
 
-        Button(onClick = onBack) {
-            Text("Назад")
+
+                SectionTitle("Трансформаторы")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    transformerOptions.forEach { windings ->
+                        FilterChip(
+                            selected = (selectedEquipment as? Transformer)?.windings == windings,
+                            onClick = { selectedEquipment = Transformer(windings = windings) },
+                            label = { Text(windings.joinToString(" / ")) }
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                TextField(
+                    value = dispatcherName,
+                    onValueChange = { dispatcherName = it },
+                    label = { Text("Диспетчерское имя") },
+                    placeholder = { Text("Введите название...") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                )
+
+                Spacer(modifier = Modifier.height(80.dp)) // Чтобы контент не перекрывался кнопкой
+            }
         }
     }
 }
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
+@Composable
+fun EquipmentChips(
+    voltages: List<Float>,
+    selectedVoltage: Float?,
+    creator: (Float) -> Equipment,
+    onSelect: (Equipment) -> Unit
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        voltages.forEach { voltage ->
+            val isSelected = (voltage == selectedVoltage)
+            FilterChip(
+                selected = isSelected,
+                onClick = { onSelect(creator(voltage)) },
+                label = { Text("${voltage.toInt()} кВ") },
+                // Используем стандартную иконку Check
+                leadingIcon = if (isSelected) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                        )
+                    }
+                } else null
+            )
+        }
+    }
+}
+

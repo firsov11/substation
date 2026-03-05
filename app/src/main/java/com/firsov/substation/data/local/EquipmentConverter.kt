@@ -1,10 +1,12 @@
 package com.firsov.substation.data.local
 
 import androidx.room.TypeConverter
-import com.firsov.substation.data.model.*
+import com.firsov.substation.data.model.Breaker
+import com.firsov.substation.data.model.Disconnector
+import com.firsov.substation.data.model.Equipment
+import com.firsov.substation.data.model.Transformer
 import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import org.json.JSONObject
 
 class EquipmentConverter {
     private val gson = Gson()
@@ -12,25 +14,32 @@ class EquipmentConverter {
     @TypeConverter
     fun fromEquipment(equipment: Equipment?): String? {
         if (equipment == null) return null
-        val jsonObject = JsonObject()
-        // Сохраняем имя класса, чтобы потом понять: Breaker это или Transformer
-        jsonObject.addProperty("type", equipment::class.java.name)
-        jsonObject.add("data", gson.toJsonTree(equipment))
-        return jsonObject.toString()
+        val json = JSONObject()
+        json.put("type", equipment::class.java.simpleName)
+        // ВАЖНО: упаковываем данные объекта в строку под ключом "data"
+        json.put("data", gson.toJson(equipment))
+        return json.toString()
     }
 
     @TypeConverter
-    fun toEquipment(json: String?): Equipment? {
-        if (json == null) return null
+    fun toEquipment(value: String?): Equipment? {
+        if (value.isNullOrBlank()) return null
         return try {
-            val jsonObject = JsonParser.parseString(json).asJsonObject
-            val className = jsonObject.get("type").asString
-            val data = jsonObject.get("data").toString()
-            // Восстанавливаем конкретный класс
-            gson.fromJson(data, Class.forName(className)) as Equipment
+            val json = JSONObject(value)
+            val type = json.getString("type")
+            // Используем optString, чтобы не выкидывать Exception, если ключа нет
+            val dataJson = json.optString("data", "{}")
+
+            when (type) {
+                "Breaker" -> gson.fromJson(dataJson, Breaker::class.java)
+                "Disconnector" -> gson.fromJson(dataJson, Disconnector::class.java)
+                "Transformer" -> gson.fromJson(dataJson, Transformer::class.java)
+                else -> null
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            null // Если данные битые, просто возвращаем null, чтобы приложение не падало
         }
     }
 }
+

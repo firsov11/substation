@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.kapt) // Добавлено
     alias(libs.plugins.hilt.android) // Добавлено
+    alias(libs.plugins.kotlin.serialization) // ДОБАВИТЬ ЭТО
 }
 
 android {
@@ -72,5 +73,11 @@ dependencies {
     kapt(libs.androidx.room.compiler)
 
     implementation(libs.google.gson)
+
+    implementation(libs.androidx.material.icons.extended)
+
+    implementation(libs.androidx.navigation.compose)
+
+    implementation(libs.kotlinx.serialization.json)
 
 }
