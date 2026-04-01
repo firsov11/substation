@@ -3,7 +3,8 @@ package com.firsov.substation.di
 import android.content.Context
 import androidx.room.Room
 import com.firsov.substation.data.local.AppDatabase
-import com.firsov.substation.data.local.CellDao
+import com.firsov.substation.data.local.ContainerDao
+import com.firsov.substation.data.local.PortDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,5 +21,8 @@ object DatabaseModule {
         Room.databaseBuilder(context, AppDatabase::class.java, "substation.db").build()
 
     @Provides
-    fun provideCellDao(db: AppDatabase): CellDao = db.cellDao()
+    fun provideCellDao(db: AppDatabase): ContainerDao = db.containerDao()
+
+    @Provides
+    fun providePortDao(db: AppDatabase): PortDao = db.portDao()
 }

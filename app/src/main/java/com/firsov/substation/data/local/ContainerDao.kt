@@ -5,17 +5,17 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.firsov.substation.data.model.Cell
+import com.firsov.substation.data.model.Container
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface CellDao {
-    @Query("SELECT * FROM cells")
-    fun getAllCells(): Flow<List<Cell>>
+interface ContainerDao {
+    @Query("SELECT * FROM container")
+    fun getAllCells(): Flow<List<Container>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdate(cell: Cell)
+    suspend fun insertOrUpdate(container: Container)
 
     @Delete
-    suspend fun delete(cell: Cell)
+    suspend fun delete(container: Container)
 }

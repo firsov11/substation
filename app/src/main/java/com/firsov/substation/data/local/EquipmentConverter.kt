@@ -2,6 +2,7 @@ package com.firsov.substation.data.local
 
 import androidx.room.TypeConverter
 import com.firsov.substation.data.model.Breaker
+import com.firsov.substation.data.model.Busbar
 import com.firsov.substation.data.model.Disconnector
 import com.firsov.substation.data.model.Equipment
 import com.firsov.substation.data.model.Transformer
@@ -27,19 +28,20 @@ class EquipmentConverter {
         return try {
             val json = JSONObject(value)
             val type = json.getString("type")
-            // Используем optString, чтобы не выкидывать Exception, если ключа нет
             val dataJson = json.optString("data", "{}")
 
             when (type) {
                 "Breaker" -> gson.fromJson(dataJson, Breaker::class.java)
                 "Disconnector" -> gson.fromJson(dataJson, Disconnector::class.java)
                 "Transformer" -> gson.fromJson(dataJson, Transformer::class.java)
+                "Busbar" -> gson.fromJson(dataJson, Busbar::class.java)
                 else -> null
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            null // Если данные битые, просто возвращаем null, чтобы приложение не падало
+            null
         }
     }
+
 }
 

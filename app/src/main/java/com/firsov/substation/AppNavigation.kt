@@ -3,63 +3,61 @@ package com.firsov.substation
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue // ВАЖНО: Добавьте этот импорт
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
-import com.firsov.substation.ui.editor.EditorCellScreen
+import androidx.navigation.navArgument
+import com.firsov.substation.ui.editor.EditorContainerScreen
 import com.firsov.substation.ui.editor.EditorScreen
 import com.firsov.substation.ui.editor.EditorViewModel
-import kotlinx.serialization.Serializable
-
-@Serializable object SubstationMap
-@Serializable data class CellEditor(val cellId: String)
 
 @Composable
 fun AppNavigation(viewModel: EditorViewModel) {
     val navController = rememberNavController()
-    // Теперь 'by' будет работать благодаря импорту getValue
-    val cells by viewModel.cells.collectAsState()
+    val containers by viewModel.containers.collectAsState()
 
-    NavHost(navController = navController, startDestination = SubstationMap) {
+    NavHost(navController = navController, startDestination = "editor_screen") {
 
-        composable<SubstationMap> {
+        // --- Главный экран редактора ---
+        composable("editor_screen") {
             EditorScreen(
                 viewModel = viewModel,
                 onEditCell = { cell ->
-                    navController.navigate(CellEditor(cellId = cell.id))
+                    navController.navigate("container_editor/${cell.id}")
                 }
             )
         }
 
-        composable<CellEditor> { backStackEntry ->
-            val args = backStackEntry.toRoute<CellEditor>()
-            val cell = cells.find { it.id == args.cellId }
-            val index = cells.indexOfFirst { it.id == args.cellId }
+        // --- Экран редактирования конкретного контейнера ---
+        composable(
+            route = "container_editor/{containerId}",
+            arguments = listOf(
+                navArgument("containerId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val containerId = backStackEntry.arguments?.getString("containerId")
+            val cell = remember(containerId) { containers.find { it.id == containerId } }
+            val index = remember(containerId) { containers.indexOfFirst { it.id == containerId } }
 
             if (cell != null) {
-                EditorCellScreen(
-                    cell = cell,
+                EditorContainerScreen(
+                    container = cell,
                     index = index,
-                    onSave = { updatedCell ->
-                        // Проверка на null для оборудования
-                        val equipment = updatedCell.equipment
-                        if (equipment != null) {
-                            // Передаем id и объект оборудования
-                            viewModel.addEquipmentToCell(updatedCell.id, equipment)
-                        }
+                    viewModel = viewModel,
+                    onSave = { updatedContainer ->
+                        viewModel.updateContainer(updatedContainer)
                         navController.popBackStack()
                     },
                     onDelete = { cellToDelete ->
-                        viewModel.deleteCell(cellToDelete)
+                        viewModel.deleteContainer(cellToDelete)
                         navController.popBackStack()
                     },
                     onBack = { navController.popBackStack() }
                 )
             } else {
-                // Если мы попали сюда, значит навигация сработала,
-                // но ячейка с таким ID не найдена в списке StateFlow
                 Text("Ошибка: Ячейка не найдена")
             }
         }

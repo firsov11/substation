@@ -1,5 +1,6 @@
 package com.firsov.substation.ui.editor
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,61 +8,166 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import com.firsov.substation.data.model.Cell
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalDensity
+import com.firsov.substation.data.model.Busbar
+import com.firsov.substation.data.model.Container
+import com.firsov.substation.utils.PortUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorScreen(
     viewModel: EditorViewModel,
-    onEditCell: (Cell) -> Unit // Используем этот колбэк для перехода
+    onEditCell: (Container) -> Unit
 ) {
-    val cells by viewModel.cells.collectAsState()
+    val containers by viewModel.containers.collectAsState()
+    val ports by viewModel.ports.collectAsState()
+    val draggingPortInfo by viewModel.draggingPort.collectAsState()
+    val dragPoint by viewModel.dragPoint.collectAsState()
+
+    val density = LocalDensity.current
 
     val gridSize = 40f
-    val gridColor = Color.LightGray.copy(alpha = 0.5f)
+    val gridColor = Color.LightGray.copy(alpha = 0.3f)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Электроподстанция") },
+                title = { Text("Редактор подстанции") },
                 actions = {
-                    IconButton(onClick = { viewModel.addCell() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Добавить ячейку")
+                    IconButton(onClick = { viewModel.addContainer() }) {
+                        Icon(Icons.Default.Add, contentDescription = "Добавить контейнер")
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { viewModel.addContainer() }) {
+                Icon(Icons.Default.Add, contentDescription = "Добавить")
+            }
         }
-    ) { padding ->
+    ) { paddingValues ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .background(Color(0xFFEFEFEF))
+                .padding(paddingValues)
+                .background(Color(0xFFF5F5F5))
         ) {
-            // Сетка
-            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+
+                // --- Сетка ---
                 for (x in 0..size.width.toInt() step gridSize.toInt()) {
-                    drawLine(gridColor, androidx.compose.ui.geometry.Offset(x.toFloat(), 0f), androidx.compose.ui.geometry.Offset(x.toFloat(), size.height), 1f)
+                    drawLine(gridColor, Offset(x.toFloat(), 0f), Offset(x.toFloat(), size.height))
                 }
                 for (y in 0..size.height.toInt() step gridSize.toInt()) {
-                    drawLine(gridColor, androidx.compose.ui.geometry.Offset(0f, y.toFloat()), androidx.compose.ui.geometry.Offset(size.width, y.toFloat()), 1f)
+                    drawLine(gridColor, Offset(0f, y.toFloat()), Offset(size.width, y.toFloat()))
+                }
+
+                // --- Линии соединений ---
+                val drawnConnections = mutableSetOf<String>()
+
+                containers.forEach { container ->
+                    val containerPorts = ports.filter { it.containerId == container.id }
+
+                    containerPorts.forEach { port ->
+                        val targetId = port.connectedToPortId
+
+                        if (targetId != null && !drawnConnections.contains(port.id)) {
+
+                            // --- START ---
+                            val startLocal = PortUtils.calculateLocalPortOffset(
+                                container,
+                                port.side,
+                                density
+                            )
+                            val start = Offset(
+                                container.x + startLocal.x,
+                                container.y + startLocal.y
+                            )
+
+                            // --- END ---
+                            val endPort = ports.find { it.id == targetId }
+                            val endContainer = containers.find { it.id == endPort?.containerId }
+
+                            val end = if (endPort != null && endContainer != null) {
+                                val endLocal = PortUtils.calculateLocalPortOffset(
+                                    endContainer,
+                                    endPort.side,
+                                    density
+                                )
+                                Offset(
+                                    endContainer.x + endLocal.x,
+                                    endContainer.y + endLocal.y
+                                )
+                            } else null
+
+                            if (end != null && endContainer != null) {
+                                val isBusToBus =
+                                    container.equipment is Busbar &&
+                                            endContainer.equipment is Busbar
+
+                                drawLine(
+                                    color = getVoltageColor(port.voltage),
+                                    start = start,
+                                    end = end,
+                                    strokeWidth = if (isBusToBus) 14f else 6f
+                                )
+
+                                drawnConnections.add(port.id)
+                                drawnConnections.add(targetId)
+                            }
+                        }
+                    }
+                }
+
+                // --- Резиновая линия ---
+                if (draggingPortInfo != null && dragPoint != null) {
+
+                    val (containerId, portId) = draggingPortInfo!!
+
+                    val startContainer = containers.find { it.id == containerId }
+                    val startPort = ports.find { it.id == portId }
+
+                    if (startContainer != null && startPort != null) {
+
+                        val startLocal = PortUtils.calculateLocalPortOffset(
+                            startContainer,
+                            startPort.side,
+                            density
+                        )
+
+                        val start = Offset(
+                            startContainer.x + startLocal.x,
+                            startContainer.y + startLocal.y
+                        )
+
+                        drawLine(
+                            color = Color.Gray,
+                            start = start,
+                            end = dragPoint!!,
+                            strokeWidth = 4f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                        )
+                    }
                 }
             }
 
-            // Ячейки
-            cells.forEach { cell ->
-                key(cell.id) {
-                    CellView(
-                        cell = cell,
-                        onMove = { movedCell, newX, newY ->
-                            val snappedX = Math.round(newX / gridSize) * gridSize
-                            val snappedY = Math.round(newY / gridSize) * gridSize
-                            viewModel.moveCell(movedCell, snappedX, snappedY)
-                        },
-                        onEdit = { onEditCell(it) } // Вызываем навигацию вместо локального стейта
+            // --- Контейнеры ---
+            containers.forEach { container ->
+                key(container.id) {
+                    ContainerView(
+                        container = container,
+                        viewModel = viewModel,
+                        onEdit = { onEditCell(it) }
                     )
                 }
             }
@@ -69,3 +175,10 @@ fun EditorScreen(
     }
 }
 
+fun getVoltageColor(voltage: Float): Color = when (voltage) {
+    330f -> Color(0xFFE91E63)
+    110f -> Color(0xFFFFEB3B)
+    35f -> Color(0xFF4CAF50)
+    10f -> Color(0xFF2196F3)
+    else -> Color.Gray
+}
