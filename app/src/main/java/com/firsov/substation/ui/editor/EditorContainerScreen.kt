@@ -61,7 +61,9 @@ fun EditorContainerScreen(
                                 is Busbar -> eq.copy(dispatcherName = dispatcherName)
                             }
                         }
-                        onSave(container.copy(equipment = finalEquipment, rotation = currentRotation))
+                        val updatedContainer = container.copy(equipment = finalEquipment, rotation = currentRotation)
+                        viewModel.updateContainerWithEquipment(updatedContainer)
+                        onSave(updatedContainer)
                     },
                     modifier = Modifier.fillMaxWidth().padding(16.dp)
                 ) {

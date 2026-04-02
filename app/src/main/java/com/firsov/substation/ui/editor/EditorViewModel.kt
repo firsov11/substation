@@ -70,11 +70,17 @@ class EditorViewModel @Inject constructor(
         _dragPoint.value = null
     }
 
-    fun stopDraggingWithSearch() {
-        stopDragging()
+    fun connectPorts(portId1: String, portId2: String) {
+        viewModelScope.launch {
+            repository.connectPorts(portId1, portId2)
+        }
     }
 
     fun disconnectPort(portId: String) {
         viewModelScope.launch { repository.disconnect(portId) }
+    }
+
+    fun updateContainerWithEquipment(container: Container) {
+        viewModelScope.launch { repository.updateContainerWithEquipment(container) }
     }
 }

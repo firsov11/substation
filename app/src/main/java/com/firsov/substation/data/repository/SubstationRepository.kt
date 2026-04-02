@@ -34,6 +34,10 @@ class SubstationRepository @Inject constructor(
 
     suspend fun updateContainer(container: Container) {
         containerDao.insertOrUpdate(container)
+    }
+
+    suspend fun updateContainerWithEquipment(container: Container) {
+        containerDao.insertOrUpdate(container)
         createPortsForContainer(container)
     }
 

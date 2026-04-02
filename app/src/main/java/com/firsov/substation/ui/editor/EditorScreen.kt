@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.firsov.substation.data.model.Busbar
 import com.firsov.substation.data.model.Container
 import com.firsov.substation.utils.PortUtils
@@ -167,7 +168,8 @@ fun EditorScreen(
                     ContainerView(
                         container = container,
                         viewModel = viewModel,
-                        onEdit = { onEditCell(it) }
+                        onEdit = { onEditCell(it) },
+                        dragPoint = dragPoint
                     )
                 }
             }
